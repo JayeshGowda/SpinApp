@@ -27,12 +27,8 @@
       animation: neonGlow 1.5s ease-in-out infinite alternate;
     }
     @keyframes neonGlow {
-      from {
-        box-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 15px #0ff;
-      }
-      to {
-        box-shadow: 0 0 20px #0ff, 0 0 30px #0ff, 0 0 40px #0ff;
-      }
+      from { box-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 15px #0ff; }
+      to { box-shadow: 0 0 20px #0ff, 0 0 30px #0ff, 0 0 40px #0ff; }
     }
     .disabled {
       background-color: #ccc;
@@ -47,68 +43,76 @@
   <img src="favicon.png" alt="profile" style="width: 100px; height: 100px; border-radius: 15%; display: block; margin: 20px auto;">
   <div class="number" id="displayNumber">Your seat number will appear here</div>
   <button id="spinButton">Find your legal seat😁✅</button>
-  <!-- Removed duplicate spinButton; add spinAgainButton if needed -->
   <div class="download">
     <button id="downloadButton" style="display:none;">Download Number</button>
   </div>
   
   <script>
-    // Get or set user's name
     let name = localStorage.getItem('name');
     if (!name) {
-      name = prompt("Enter your name");
-      name = name ? name : "Anonymous";
+      name = prompt("Enter your name") || "Anonymous";
       localStorage.setItem('name', name);
     }
-    
+
     const spinButton = document.getElementById('spinButton');
     const displayNumber = document.getElementById('displayNumber');
     const downloadButton = document.getElementById('downloadButton');
-    
-    // Get today's date as YYYY-MM-DD
+
     const today = new Date().toISOString().split('T')[0];
     const storedSpinDate = localStorage.getItem('spinDate');
+    let assignedNumbers = JSON.parse(localStorage.getItem('assignedNumbers')) || []; // Load assigned numbers
+
+    // Get stored number
     const storedNumber = localStorage.getItem('spinNumber');
-    
-    // Check if the user already spun today
+
     if (storedSpinDate === today && storedNumber) {
-      displayNumber.textContent = name + ", your seat number is " + storedNumber;
+      displayNumber.textContent = `${name}, your seat number is ${storedNumber}`;
       spinButton.disabled = true;
       downloadButton.style.display = 'inline-block';
     }
-    
+
+    function getUniqueNumber() {
+      let availableNumbers = Array.from({ length: 11 }, (_, i) => i + 1).filter(num => !assignedNumbers.includes(num));
+
+      if (availableNumbers.length === 0) {
+        alert("All numbers have been assigned. Try again tomorrow!");
+        return null;
+      }
+
+      let randomIndex = Math.floor(Math.random() * availableNumbers.length);
+      return availableNumbers[randomIndex];
+    }
+
     spinButton.addEventListener('click', () => {
-      // Prevent multiple spins per day
       if (localStorage.getItem('spinDate') === today) {
         alert("You have already spun today!");
         return;
       }
-      
-      // Generate a random number from 1 to 11
-      const number = Math.floor(Math.random() * 11) + 1;
-      
-      // Save the spin result only when the user spins
+
+      let number = getUniqueNumber();
+      if (number === null) return;
+
+      assignedNumbers.push(number);
+      localStorage.setItem('assignedNumbers', JSON.stringify(assignedNumbers)); // Store updated assigned numbers
       localStorage.setItem('spinDate', today);
       localStorage.setItem('spinNumber', number);
-      
-      // Display the number in gray
-      displayNumber.textContent = name + ", your seat number is " + number;
+
+      displayNumber.textContent = `${name}, your seat number is ${number}`;
       spinButton.disabled = true;
       downloadButton.style.display = 'inline-block';
     });
-    
+
     downloadButton.addEventListener('click', () => {
       const number = localStorage.getItem('spinNumber');
       const blob = new Blob([number], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = `spin_${today}.txt`;
       document.body.appendChild(a);
       a.click();
-      
-      // Cleanup
+
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     });
